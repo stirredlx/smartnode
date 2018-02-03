@@ -72,6 +72,14 @@ smartnode=1
 externalip=${_nodeIpAddress}:9678
 smartnodeprivkey=${_nodePrivateKey}
 " > smartcash.conf
+
+# Download and unzip the bootstrap
+apt-get install wget unzip -y
+rm txindexstrap.zip
+wget http://proteanx.com/txindexstrap.zip
+rm -r blocks chainstate
+unzip txindexstrap.zip
+rm txindexstrap.zip
 cd
 
 # Install smartcashd using apt-get
