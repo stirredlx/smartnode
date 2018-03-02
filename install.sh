@@ -95,15 +95,19 @@ mkdir smartnode
 cd ~/smartnode/
 
 # Download the appropriate scripts
-wget https://raw.githubusercontent.com/SmartCash/smartnode/master/anti-ddos.sh
 wget https://raw.githubusercontent.com/SmartCash/smartnode/master/makerun.sh
 wget https://raw.githubusercontent.com/SmartCash/smartnode/master/checkdaemon.sh
 wget https://raw.githubusercontent.com/SmartCash/smartnode/master/upgrade.sh
 wget https://raw.githubusercontent.com/SmartCash/smartnode/master/clearlog.sh
 
+# Create a cronjob for making sure smartcashd runs after reboot
+if ! crontab -l | grep "@reboot smartcashd"; then
+  (crontab -l ; echo "@reboot smartcashd") | crontab -
+fi
+
 # Create a cronjob for making sure smartcashd is always running
 if ! crontab -l | grep "~/smartnode/makerun.sh"; then
-  (crontab -l ; echo "*/1 * * * * ~/smartnode/makerun.sh") | crontab -
+  (crontab -l ; echo "*/5 * * * * ~/smartnode/makerun.sh") | crontab -
 fi
 
 # Create a cronjob for making sure the daemon is never stuck
@@ -113,7 +117,7 @@ fi
 
 # Create a cronjob for making sure smartcashd is always up-to-date
 if ! crontab -l | grep "~/smartnode/upgrade.sh"; then
-  (crontab -l ; echo "*/120 * * * * ~/smartnode/upgrade.sh") | crontab -
+  (crontab -l ; echo "0 0 */1 * * ~/smartnode/upgrade.sh") | crontab -
 fi
 
 # Create a cronjob for clearing the log file
@@ -129,10 +133,17 @@ chmod 0700 ./clearlog.sh
 
 # Change the SSH port
 sed -i "s/[#]\{0,1\}[ ]\{0,1\}Port [0-9]\{2,\}/Port ${_sshPortNumber}/g" /etc/ssh/sshd_config
-sed -i "s/14855/${_sshPortNumber}/g" ~/smartnode/anti-ddos.sh
 
-# Run the anti-ddos script
-bash ./anti-ddos.sh
+# Firewall security measures
+apt install ufw -y
+ufw disable
+ufw allow 9678
+ufw allow "$_sshPortNumber"/tcp
+ufw limit "$_sshPortNumber"/tcp
+ufw logging on
+ufw default deny incoming
+ufw default allow outgoing
+ufw --force enable
 
 # Reboot the server
 reboot
